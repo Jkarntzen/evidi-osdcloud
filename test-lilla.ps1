@@ -27,7 +27,7 @@ $okGet = [T.Pal]::GetConsoleScreenBufferInfoEx($h, [ref]$i)
 Write-Host ("GET-kall: {0}   (Magenta-slot foer: 0x{1:X6})" -f $okGet, $i.ColorTable[13])
 Write-Host "FOER : " -NoNewline; Write-Host "   LILLA-TEST   " -BackgroundColor Magenta -ForegroundColor White
 
-$i.ColorTable[13] = (142 -bor (63 -shl 8) -bor (176 -shl 16))   # #8E3FB0
+$i.ColorTable[13] = (80 -bor (36 -shl 8) -bor (118 -shl 16))   # #502476
 $okSet = [T.Pal]::SetConsoleScreenBufferInfoEx($h, [ref]$i)
 Write-Host ("SET-kall: {0}" -f $okSet)
 Write-Host "ETTER: " -NoNewline; Write-Host "   LILLA-TEST   " -BackgroundColor Magenta -ForegroundColor White
