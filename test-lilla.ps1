@@ -1,6 +1,6 @@
-# Evidi - test av lilla konsollfarge (palett-remap) i WinPE.
-# Kjor i WinPE-konsollen:  irm 'https://raw.githubusercontent.com/Jkarntzen/evidi-osdcloud/main/test-lilla.ps1' | iex
-# Viser om SetConsoleScreenBufferInfoEx virker + fargen FOER/ETTER. Er ETTER dyp lilla = fiksen virker.
+# Evidi - lilla fargevifte for WinPE-konsollen.
+# Kjor i WinPE:  irm 'https://raw.githubusercontent.com/Jkarntzen/evidi-osdcloud/main/test-lilla.ps1' | iex
+# Viser 7 lilla-nyanser (moerk -> lys). Velg nummeret du liker, saa setter vi den i menyen.
 
 $def = @'
 [StructLayout(LayoutKind.Sequential)] public struct COORD { public short X; public short Y; }
@@ -16,21 +16,35 @@ $def = @'
 '@
 
 try { Add-Type -Namespace T -Name Pal -MemberDefinition $def -ErrorAction Stop }
-catch { Write-Host "Add-Type FEILET (ingen C#-kompilator i WinPE?): $($_.Exception.Message)" -ForegroundColor Red; return }
+catch { Write-Host "Add-Type FEILET: $($_.Exception.Message)" -ForegroundColor Red; return }
+
+# Kandidat-nyanser (moerk -> lys). Hver mappes til en ledig konsoll-slot vi ikke bruker ellers.
+$Kandidater = @(
+    @{ Nr=1; Slot=1; Navn='DarkBlue';    R=64;  G=30;  B=96;  Hex='#401E60' },   # dagens - for moerk
+    @{ Nr=2; Slot=2; Navn='DarkGreen';   R=84;  G=42;  B=122; Hex='#542A7A' },
+    @{ Nr=3; Slot=3; Navn='DarkCyan';    R=106; G=53;  B=150; Hex='#6A3596' },
+    @{ Nr=4; Slot=4; Navn='DarkRed';     R=142; G=63;  B=176; Hex='#8E3FB0' },
+    @{ Nr=5; Slot=5; Navn='DarkMagenta'; R=160; G=82;  B=200; Hex='#A052C8' },
+    @{ Nr=6; Slot=6; Navn='DarkYellow';  R=181; G=106; B=216; Hex='#B56AD8' },
+    @{ Nr=7; Slot=9; Navn='Blue';        R=200; G=130; B=230; Hex='#C882E6' }
+)
 
 $h = [T.Pal]::GetStdHandle(-11)
 $i = New-Object T.Pal+CONSOLE_SCREEN_BUFFER_INFO_EX
 $i.ColorTable = New-Object int[] 16
 $i.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf([type][T.Pal+CONSOLE_SCREEN_BUFFER_INFO_EX])
-
 $okGet = [T.Pal]::GetConsoleScreenBufferInfoEx($h, [ref]$i)
-Write-Host ("GET-kall: {0}   (Magenta-slot foer: 0x{1:X6})" -f $okGet, $i.ColorTable[13])
-Write-Host "FOER : " -NoNewline; Write-Host "   LILLA-TEST   " -BackgroundColor Magenta -ForegroundColor White
 
-$i.ColorTable[13] = (64 -bor (30 -shl 8) -bor (96 -shl 16))   # #401E60
+foreach ($k in $Kandidater) { $i.ColorTable[$k.Slot] = ($k.R -bor ($k.G -shl 8) -bor ($k.B -shl 16)) }
 $okSet = [T.Pal]::SetConsoleScreenBufferInfoEx($h, [ref]$i)
-Write-Host ("SET-kall: {0}" -f $okSet)
-Write-Host "ETTER: " -NoNewline; Write-Host "   LILLA-TEST   " -BackgroundColor Magenta -ForegroundColor White
+
 Write-Host ""
-if ($okGet -and $okSet) { Write-Host "OK - hvis 'ETTER'-baren ble dyp lilla, virker fiksen i din WinPE." -ForegroundColor Green }
-else { Write-Host "API-et virker IKKE her (GET/SET=False) - da maa vi bruke en annen metode." -ForegroundColor Yellow }
+Write-Host ("  GET={0}  SET={1}   (begge skal vaere True)" -f $okGet, $okSet) -ForegroundColor Gray
+Write-Host "  Lilla-vifte - velg nummeret du liker:" -ForegroundColor Gray
+Write-Host ""
+foreach ($k in $Kandidater) {
+    Write-Host ("   {0}  {1,-8} " -f $k.Nr, $k.Hex) -ForegroundColor Gray -NoNewline
+    Write-Host "   VALGT RAD - EVIDI   " -BackgroundColor $k.Navn -ForegroundColor White
+}
+Write-Host ""
+if (-not ($okGet -and $okSet)) { Write-Host "  ADVARSEL: GET/SET=False - palett-API virker ikke her." -ForegroundColor Yellow }
